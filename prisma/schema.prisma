@@ -1,0 +1,173 @@
+// AVORAS E-commerce Database Schema
+// Run: npx prisma migrate dev --name init
+// Then: npm run db:seed
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  BKASH
+  NAGAD
+  CARD
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  phone         String?
+  role          Role      @default(CUSTOMER)
+  addresses     Address[]
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  fullName     String
+  phone        String
+  division     String
+  district     String
+  area         String
+  addressLine  String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@map("addresses")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+
+  @@map("categories")
+}
+
+model Product {
+  id             String           @id @default(cuid())
+  title          String
+  slug           String           @unique
+  description    String
+  price          Decimal          @db.Decimal(10, 2)
+  compareAtPrice Decimal?         @db.Decimal(10, 2)
+  images         String[]
+  category       Category         @relation(fields: [categoryId], references: [id])
+  categoryId     String
+  ageRange       String
+  material       String?
+  isFeatured     Boolean          @default(false)
+  isActive       Boolean          @default(true)
+  rating         Float            @default(4.8)
+  reviewCount    Int              @default(0)
+  variants       ProductVariant[]
+  orderItems     OrderItem[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([categoryId])
+  @@index([slug])
+  @@map("products")
+}
+
+model ProductVariant {
+  id         String      @id @default(cuid())
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  size       String
+  color      String?
+  sku        String      @unique
+  stock      Int         @default(0)
+  priceDelta Decimal     @default(0) @db.Decimal(10, 2)
+  orderItems OrderItem[]
+  createdAt  DateTime    @default(now())
+
+  @@unique([productId, size, color])
+  @@map("product_variants")
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  user            User?         @relation(fields: [userId], references: [id])
+  userId          String?
+  items           OrderItem[]
+  subtotal        Decimal       @db.Decimal(10, 2)
+  shippingFee     Decimal       @default(0) @db.Decimal(10, 2)
+  discount        Decimal       @default(0) @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(COD)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  bkashTxnId      String?
+
+  // Shipping details (denormalized for guest checkout)
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  division        String
+  district        String
+  area            String
+  addressLine     String
+  orderNote       String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+  @@index([orderNumber])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String          @id @default(cuid())
+  order      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  product    Product         @relation(fields: [productId], references: [id])
+  productId  String
+  variant    ProductVariant? @relation(fields: [variantId], references: [id])
+  variantId  String?
+  titleSnap  String
+  imageSnap  String
+  size       String
+  price      Decimal         @db.Decimal(10, 2)
+  quantity   Int
+
+  @@map("order_items")
+}
