@@ -1,7 +1,3 @@
-// AVORAS E-commerce Database Schema
-// Run: npx prisma migrate dev --name init
-// Then: npm run db:seed
-
 generator client {
   provider = "prisma-client-js"
   previewFeatures = ["driverAdapters"]

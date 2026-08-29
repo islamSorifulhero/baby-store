@@ -2,10 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import { createHash } from "crypto";
 
 const prisma = new PrismaClient();
-
-// NOTE: For production, replace this with a proper bcrypt/argon2 hash
-// (e.g. `npm i bcryptjs` and use bcrypt.hashSync(pw, 10)). SHA-256 is used
-// here only so the seed script has zero extra dependencies out of the box.
 function hash(pw: string) {
   return createHash("sha256").update(pw).digest("hex");
 }
